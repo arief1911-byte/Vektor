@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JPG ke Vektor</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef2f7;--panel:#fff;--ink:#14213d;--mute:#5b6b85;--line:#c9d3e3;--acc:#e0245e;--acc-ink:#fff;--grid:#dbe3ef}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f1830;--panel:#16223f;--ink:#e8eefc;--mute:#9bacca;--line:#2c3c63;--acc:#ff4f86;--acc-ink:#14061a;--grid:#1b2a4d}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0f1830;--panel:#16223f;--ink:#e8eefc;--mute:#9bacca;--line:#2c3c63;--acc:#ff4f86;--acc-ink:#14061a;--grid:#1b2a4d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+h1{font:700 clamp(1.8rem,5vw,2.8rem)/1.1 Georgia,"Times New Roman",serif;margin:8px 0 6px;letter-spacing:-.02em}
+p.lead{margin:0 0 20px;color:var(--mute);max-width:60ch}
+.layout{display:grid;gap:16px;grid-template-columns:300px 1fr}
+@media(max-width:820px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1.5px solid var(--ink);border-radius:6px;padding:16px}
+#drop{border:2px dashed var(--line);border-radius:6px;padding:18px;text-align:center;cursor:pointer;color:var(--mute)}
+#drop.over,#drop:focus-visible{border-color:var(--acc);outline:none}
+#drop strong{color:var(--ink);display:block}
+label{display:block;font-size:.88rem;margin:14px 0 4px;font-weight:600}
+label span{float:right;color:var(--mute);font-weight:400;font-variant-numeric:tabular-nums}
+label.chk{display:flex;gap:8px;align-items:center;font-weight:400;margin:10px 0 0}
+input[type=range]{width:100%;accent-color:var(--acc)}
+select{width:100%;padding:8px;border:1.5px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);font:inherit}
+button{font:inherit;font-weight:600;padding:11px 14px;border-radius:4px;border:1.5px solid var(--ink);background:var(--panel);color:var(--ink);cursor:pointer;width:100%}
+button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);margin-top:18px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.views{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media(max-width:560px){.views{grid-template-columns:1fr}}
+.view{background:var(--panel);border:1.5px solid var(--ink);border-radius:6px;overflow:hidden;min-width:0}
+.view h2{margin:0;padding:8px 12px;font-size:.9rem;border-bottom:1.5px solid var(--ink)}
+.stage{aspect-ratio:1/1;overflow:auto;background:#fff}
+.stage img{display:block;margin:auto;width:100%;height:100%;object-fit:contain}
+.stage.z img{height:auto;object-fit:initial;margin:0}
+.stage .ph{color:#5b6b85;font-size:.9rem;padding:20px;text-align:center}
+#stats{margin:12px 0 0;color:var(--mute);font-size:.9rem;min-height:1.4em}
+.dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.err{color:var(--acc);font-weight:600}
+.stage.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:6px;align-content:start}
+.stage.grid img{width:100%;height:auto;aspect-ratio:1/1;border:1px solid var(--line)}
+input[type=number]{width:100%;padding:8px;border:1.5px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);font:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>JPG ke vektor</h1>
+<p class="lead">Ubah gambar JPG menjadi SVG dengan kurva halus yang tetap tajam di ukuran apa pun. Semua proses berjalan di browser Anda; gambar tidak diunggah ke mana pun.</p>
+<div class="layout">
+<section class="panel" aria-label="Pengaturan">
+<div id="drop" tabindex="0" role="button" aria-label="Pilih gambar"><strong>Pilih atau seret gambar ke sini</strong>JPG, PNG, atau WebP</div>
+<input id="file" type="file" accept="image/*" hidden>
+<label for="preset">Jenis gambar</label>
+<select id="preset">
+<option value="ikon">Ikon / garis (hitam-putih)</option>
+<option value="logo">Logo berwarna</option>
+<option value="foto">Foto</option>
+</select>
+<label for="split">Isi gambar</label>
+<select id="split">
+<option value="one">Satu ikon / satu gambar</option>
+<option value="auto">Beberapa ikon: pisahkan otomatis</option>
+<option value="grid">Beberapa ikon: pisahkan per kotak (grid)</option>
+</select>
+<div id="autoBox" hidden><label for="count">Jumlah ikon di gambar</label><input id="count" type="number" min="2" max="100" value="16"></div>
+<div id="gridBox" hidden><div class="two"><div><label for="cols">Kolom</label><input id="cols" type="number" min="1" max="20" value="4"></div><div><label for="rows">Baris</label><input id="rows" type="number" min="1" max="20" value="4"></div></div></div>
+<label for="colors" id="colorsL">Jumlah warna <span id="colorsV"></span></label>
+<input id="colors" type="range" min="2" max="32" value="6">
+<label for="thick">Ketebalan garis <span id="thickV"></span></label>
+<input id="thick" type="range" min="-80" max="80" value="-10">
+<label for="blur">Haluskan sumber (derau JPG) <span id="blurV"></span></label>
+<input id="blur" type="range" min="0" max="3" step="0.1" value="0.4">
+<label for="smooth">Kehalusan kurva <span id="smoothV"></span></label>
+<input id="smooth" type="range" min="0" max="12" value="4">
+<label for="eps">Toleransi simpul <span id="epsV"></span></label>
+<input id="eps" type="range" min="0.1" max="2" step="0.05" value="0.35">
+<label for="minArea">Buang bintik kecil <span id="minAreaV"></span></label>
+<input id="minArea" type="range" min="0" max="30" value="0">
+<label class="chk"><input type="checkbox" id="corners" checked> Pertahankan sudut tajam</label>
+<label class="chk" id="bgL"><input type="checkbox" id="bg"> Tambahkan latar putih</label>
+<button class="primary" id="go" disabled>Ubah ke vektor</button>
+</section>
+<section>
+<div class="views">
+<div class="view"><h2>Asli</h2><div class="stage" id="s1"><div class="ph">Belum ada gambar</div></div></div>
+<div class="view"><h2>Vektor (SVG)</h2><div class="stage" id="s2"><div class="ph">Hasil muncul di sini</div></div></div>
+</div>
+<label for="zoom">Zoom pratinjau <span id="zoomV"></span></label>
+<input id="zoom" type="range" min="1" max="6" step="0.5" value="1">
+<p id="stats" aria-live="polite"></p>
+<div class="dl" id="dlOne">
+<button id="dlSvg" disabled>Unduh SVG</button>
+<button id="dlPng" disabled>Unduh PNG besar</button>
+</div>
+<div id="dlMulti" hidden>
+<button id="dlZip" class="primary" style="margin-top:12px" disabled>Unduh ZIP</button>
+<label class="chk"><input type="checkbox" id="zipPng" checked> Sertakan juga PNG di dalam ZIP</label>
+</div>
+<label for="pngsize" style="margin-top:12px">Lebar PNG ekspor <span id="pngsizeV"></span></label>
+<input id="pngsize" type="range" min="1000" max="8000" step="500" value="4000">
+</section>
+</div>
+</main>
+<script>
+(function(root){
+'use strict';
+var tick=function(){return new Promise(function(r){setTimeout(r,0)})};
+function gk(s){var r=Math.max(1,Math.ceil(s*3)),k=new Float32Array(2*r+1),t=0,i;for(i=-r;i<=r;i++){k[i+r]=Math.exp(-i*i/(2*s*s));t+=k[i+r]}for(i=0;i<k.length;i++)k[i]/=t;return k}
+function blur(src,w,h,s){
+ if(s<=0.01)return src;var k=gk(s),r=(k.length-1)/2,tmp=new Float32Array(w*h),out=new Float32Array(w*h),x,y,j,a,p;
+ for(y=0;y<h;y++)for(x=0;x<w;x++){a=0;for(j=-r;j<=r;j++){p=x+j;p=p<0?0:p>=w?w-1:p;a+=src[y*w+p]*k[j+r]}tmp[y*w+x]=a}
+ for(y=0;y<h;y++)for(x=0;x<w;x++){a=0;for(j=-r;j<=r;j++){p=y+j;p=p<0?0:p>=h?h-1:p;a+=tmp[p*w+x]*k[j+r]}out[y*w+x]=a}
+ return out}
+function weights(n,s,N){var W=n*s,idx=new Int32Array(W*4),wt=new Float32Array(W*4),o,u,i0,t,t2,t3,j,p;
+ for(o=0;o<W;o++){u=(o+0.5)/s-0.5;i0=Math.floor(u);t=u-i0;t2=t*t;t3=t2*t;
+  wt[o*4]=(-t3+2*t2-t)/2;wt[o*4+1]=(3*t3-5*t2+2)/2;wt[o*4+2]=(-3*t3+4*t2+t)/2;wt[o*4+3]=(t3-t2)/2;
+  for(j=0;j<4;j++){p=i0-1+j;idx[o*4+j]=p<0?0:p>=N?N-1:p}}
+ return{idx:idx,wt:wt}}
+function upsample(src,w,h,s){
+ var W=w*s,H=h*s,wx=weights(w,s,w),wy=weights(h,s,h),tmp=new Float32Array(W*h),out=new Float32Array(W*H),x,y,j,a;
+ for(y=0;y<h;y++)for(x=0;x<W;x++){a=0;for(j=0;j<4;j++)a+=src[y*w+wx.idx[x*4+j]]*wx.wt[x*4+j];tmp[y*W+x]=a}
+ for(y=0;y<H;y++)for(x=0;x<W;x++){a=0;for(j=0;j<4;j++)a+=tmp[wy.idx[y*4+j]*W+x]*wy.wt[y*4+j];out[y*W+x]=a}
+ return{data:out,W:W,H:H}}
+function otsu(v){var h=new Float64Array(256),i,n=v.length,sum=0,sB=0,wB=0,best=0,bt=128;
+ for(i=0;i<n;i++){h[Math.max(0,Math.min(255,Math.round(v[i])))]++}
+ for(i=0;i<256;i++)sum+=i*h[i];
+ for(i=0;i<256;i++){wB+=h[i];if(!wB)continue;var wF=n-wB;if(!wF)break;sB+=i*h[i];var mB=sB/wB,mF=(sum-sB)/wF,b=wB*wF*(mB-mF)*(mB-mF);if(b>best){best=b;bt=i}}
+ return bt}
+// marching squares -> closed loops of sub-pixel points (flat arrays), field F is W*H with a background border
+function contours(F,W,H,thr){
+ var N=W*H,nb=new Int32Array(4*N).fill(-1),x,y,i,k;
+ function add(a,b){if(nb[2*a]<0)nb[2*a]=b;else nb[2*a+1]=b;if(nb[2*b]<0)nb[2*b]=a;else nb[2*b+1]=a}
+ for(y=0;y<H-1;y++)for(x=0;x<W-1;x++){
+  i=y*W+x;var a=F[i]>=thr?1:0,b=F[i+1]>=thr?1:0,c=F[i+W+1]>=thr?1:0,d=F[i+W]>=thr?1:0;
+  k=a|(b<<1)|(c<<2)|(d<<3);if(k===0||k===15)continue;
+  var T=i,R=N+i+1,B=i+W,L=N+i;
+  switch(k){
+   case 1:case 14:add(L,T);break;case 2:case 13:add(T,R);break;case 3:case 12:add(L,R);break;
+   case 4:case 11:add(R,B);break;case 6:case 9:add(T,B);break;case 7:case 8:add(L,B);break;
+   case 5:if((F[i]+F[i+1]+F[i+W]+F[i+W+1])/4>=thr){add(T,R);add(B,L)}else{add(L,T);add(R,B)}break;
+   case 10:if((F[i]+F[i+1]+F[i+W]+F[i+W+1])/4>=thr){add(L,T);add(R,B)}else{add(T,R);add(L,B)}break}}
+ var vis=new Uint8Array(2*N),loops=[],e;
+ function pt(cur,p){var px,py,q,v0,v1;
+  if(cur<N){py=(cur/W)|0;px=cur-py*W;v0=F[cur];v1=F[cur+1];px+=(thr-v0)/(v1-v0)}
+  else{q=cur-N;py=(q/W)|0;px=q-py*W;v0=F[q];v1=F[q+W];py+=(thr-v0)/(v1-v0)}
+  p.push(px-0.5,py-0.5)}
+ for(e=0;e<2*N;e++){
+  if(vis[e]||nb[2*e]<0)continue;var pts=[],prev=-1,cur=e,n;
+  for(;;){vis[cur]=1;pt(cur,pts);n=nb[2*cur];if(n===prev)n=nb[2*cur+1];if(n<0||n===e||vis[n])break;prev=cur;cur=n}
+  if(pts.length>=16)loops.push(pts)}
+ return loops}
+function smoothLoop(x,y,n,r,it){
+ if(n<2*r+3)return;var nx=new Float64Array(n),ny=new Float64Array(n),t,i,j,sx,sy,m=2*r+1;
+ for(t=0;t<it;t++){for(i=0;i<n;i++){sx=0;sy=0;for(j=-r;j<=r;j++){var q=(i+j+n)%n;sx+=x[q];sy+=y[q]}nx[i]=sx/m;ny[i]=sy/m}
+  for(i=0;i<n;i++){x[i]=nx[i];y[i]=ny[i]}}}
+function findCorners(x,y,n,k,thr){
+ var ang=new Float32Array(n),i,j,out=[];if(n<4*k)return out;
+ for(i=0;i<n;i++){var p=(i-k+n)%n,q=(i+k)%n,ax=x[i]-x[p],ay=y[i]-y[p],bx=x[q]-x[i],by=y[q]-y[i],la=Math.hypot(ax,ay),lb=Math.hypot(bx,by);
+  if(la<1e-6||lb<1e-6)continue;var c=(ax*bx+ay*by)/(la*lb);ang[i]=Math.acos(Math.max(-1,Math.min(1,c)))}
+ for(i=0;i<n;i++){if(ang[i]<thr)continue;var ok=true;
+  for(j=1;j<=k&&ok;j++){if(ang[(i-j+n)%n]>=ang[i]||ang[(i+j)%n]>ang[i])ok=false}
+  if(ok)out.push(i)}
+ return out}
+function dpChain(x,y,start,len,n,eps,keep){
+ var st=[[0,len]],a,b,ia,ib,L,md,mi,k,ik,d,dx,dy;keep[start%n]=1;keep[(start+len)%n]=1;
+ while(st.length){var s=st.pop();a=s[0];b=s[1];if(b-a<2)continue;ia=(start+a)%n;ib=(start+b)%n;dx=x[ib]-x[ia];dy=y[ib]-y[ia];L=Math.hypot(dx,dy);md=-1;mi=-1;
+  for(k=a+1;k<b;k++){ik=(start+k)%n;d=L<1e-9?Math.hypot(x[ik]-x[ia],y[ik]-y[ia]):Math.abs((x[ik]-x[ia])*dy-(y[ik]-y[ia])*dx)/L;if(d>md){md=d;mi=k}}
+  if(md>eps){keep[(start+mi)%n]=1;st.push([a,mi],[mi,b])}}}
+function f1(v){return Math.round(v*10)/10}
+function loopToPath(pts,o,s){
+ var n=pts.length/2,x=new Float64Array(n),y=new Float64Array(n),i,area=0;
+ for(i=0;i<n;i++){x[i]=pts[2*i];y[i]=pts[2*i+1]}
+ for(i=0;i<n;i++){var j=(i+1)%n;area+=x[i]*y[j]-x[j]*y[i]}
+ if(Math.abs(area)/2<o.minArea*s*s)return'';
+ smoothLoop(x,y,n,2,o.smooth);
+ var cs=o.corners?findCorners(x,y,n,3,1.3):[],keep=new Uint8Array(n),isC=new Uint8Array(n);
+ for(i=0;i<cs.length;i++)isC[cs[i]]=1;
+ if(cs.length===0)dpChain(x,y,0,n,n,o.eps,keep);
+ else for(i=0;i<cs.length;i++){var a=cs[i],b=cs[(i+1)%cs.length],len=(b-a+n)%n;if(len===0)len=n;dpChain(x,y,a,len,n,o.eps,keep)}
+ var qx=[],qy=[],qc=[];
+ for(i=0;i<n;i++)if(keep[i]){qx.push(x[i]);qy.push(y[i]);qc.push(isC[i])}
+ var m=qx.length;if(m<3)return'';
+ var d='M'+f1(qx[0])+' '+f1(qy[0]);
+ for(i=0;i<m;i++){
+  var p0=(i-1+m)%m,p1=i,p2=(i+1)%m,p3=(i+2)%m,cx=qx[p2]-qx[p1],cy=qy[p2]-qy[p1],ch=Math.hypot(cx,cy);
+  if(ch<1e-6)continue;var t1x,t1y,t2x,t2y,l;
+  if(qc[p1]){t1x=cx/ch;t1y=cy/ch}else{t1x=qx[p2]-qx[p0];t1y=qy[p2]-qy[p0];l=Math.hypot(t1x,t1y)||1;t1x/=l;t1y/=l}
+  if(qc[p2]){t2x=cx/ch;t2y=cy/ch}else{t2x=qx[p3]-qx[p1];t2y=qy[p3]-qy[p1];l=Math.hypot(t2x,t2y)||1;t2x/=l;t2y/=l}
+  var h=ch/3,c1x=qx[p1]+t1x*h,c1y=qy[p1]+t1y*h,c2x=qx[p2]-t2x*h,c2y=qy[p2]-t2y*h;
+  var dd1=Math.abs((c1x-qx[p1])*cy-(c1y-qy[p1])*cx)/ch,dd2=Math.abs((c2x-qx[p1])*cy-(c2y-qy[p1])*cx)/ch;
+  d+=(dd1<0.05&&dd2<0.05)?'L'+f1(qx[p2])+' '+f1(qy[p2]):'C'+f1(c1x)+' '+f1(c1y)+' '+f1(c2x)+' '+f1(c2y)+' '+f1(qx[p2])+' '+f1(qy[p2])}
+ return d+'Z'}
+function traceField(up,W,H,thr,o,s){
+ var PW=W+2,PH=H+2,P=new Float32Array(PW*PH),y;
+ for(y=0;y<H;y++)P.set(up.subarray(y*W,y*W+W),(y+1)*PW+1);
+ var loops=contours(P,PW,PH,Math.max(thr,1)),ds=[],i;
+ for(i=0;i<loops.length;i++){var d=loopToPath(loops[i],o,s);if(d)ds.push(d)}
+ return ds}
+function hex(c){return'#'+c.map(function(v){v=Math.max(0,Math.min(255,Math.round(v)));return(v<16?'0':'')+v.toString(16)}).join('')}
+function kmeans(R,G,B,w,h,k){
+ var n=w*h,step=Math.max(1,Math.floor(n/30000)),S=[],i,j,seed=12345;
+ function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+ for(i=0;i<n;i+=step)S.push(i);
+ var C=[],f=S[Math.floor(rnd()*S.length)];C.push([R[f],G[f],B[f]]);
+ var dist=new Float64Array(S.length).fill(1e18);
+ while(C.length<k){var tot=0,c=C[C.length-1];
+  for(i=0;i<S.length;i++){var p=S[i],dr=R[p]-c[0],dg=G[p]-c[1],db=B[p]-c[2],dd=dr*dr+dg*dg+db*db;if(dd<dist[i])dist[i]=dd;tot+=dist[i]}
+  if(tot<=0)break;var r=rnd()*tot,pick=0;for(i=0;i<S.length;i++){r-=dist[i];if(r<=0){pick=i;break}}
+  var q=S[pick];C.push([R[q],G[q],B[q]])}
+ k=C.length;
+ function nearest(p){var bi=0,bd=1e18;for(var c=0;c<k;c++){var dr=R[p]-C[c][0],dg=G[p]-C[c][1],db=B[p]-C[c][2],dd=dr*dr+dg*dg+db*db;if(dd<bd){bd=dd;bi=c}}return bi}
+ for(var it=0;it<10;it++){var sm=[];for(j=0;j<k;j++)sm.push([0,0,0,0]);
+  for(i=0;i<S.length;i++){var l=nearest(S[i]),a=sm[l];a[0]+=R[S[i]];a[1]+=G[S[i]];a[2]+=B[S[i]];a[3]++}
+  for(j=0;j<k;j++)if(sm[j][3])C[j]=[sm[j][0]/sm[j][3],sm[j][1]/sm[j][3],sm[j][2]/sm[j][3]]}
+ var lab=new Uint8Array(n),cnt=new Int32Array(k);
+ for(i=0;i<n;i++){lab[i]=nearest(i);cnt[lab[i]]++}
+ var order=[];for(j=0;j<k;j++)if(cnt[j])order.push(j);order.sort(function(a,b){return cnt[b]-cnt[a]});
+ var remap=new Int16Array(k).fill(-1);order.forEach(function(c,r){remap[c]=r});
+ for(i=0;i<n;i++)lab[i]=remap[lab[i]];
+ return{cent:order.map(function(c){return C[c]}),label:lab}}
+function defaults(){return{mode:'bw',colors:8,blur:0.6,thick:0,smooth:3,eps:0.5,minArea:1,corners:true,bg:false,target:1400}}
+async function convert(rgba,w,h,opt,progress){
+ var o=Object.assign(defaults(),opt),n=w*h,i,
+  s=Math.max(1,Math.min(8,Math.round((o.mode==='bw'?o.target:Math.min(o.target,1000))/Math.max(w,h))));
+ while(w*h*s*s>2.4e6&&s>1)s--;
+ var R=new Float32Array(n),G=new Float32Array(n),B=new Float32Array(n);
+ for(i=0;i<n;i++){var a=rgba[4*i+3]/255,q=255*(1-a);R[i]=rgba[4*i]*a+q;G[i]=rgba[4*i+1]*a+q;B[i]=rgba[4*i+2]*a+q}
+ var W=w*s,H=h*s,body='',cnt=0,svgHead='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">';
+ if(o.mode==='bw'){
+  var gray=new Float32Array(n);for(i=0;i<n;i++)gray[i]=0.299*R[i]+0.587*G[i]+0.114*B[i];
+  var bg=blur(gray,w,h,o.blur),srt=Float32Array.from(gray).sort(),lo=srt[Math.floor(n*0.01)],hi=srt[Math.floor(n*0.99)],ot=(lo+hi)/2,dk=lo+(hi-lo)*0.2,ink=new Float32Array(n),sr=0,sg=0,sb=0,sc=0;
+  for(i=0;i<n;i++){ink[i]=255-bg[i];if(gray[i]<dk){sr+=R[i];sg+=G[i];sb+=B[i];sc++}}
+  var col=sc?[sr/sc,sg/sc,sb/sc]:[0,0,0];
+  var up=upsample(ink,w,h,s),ds=traceField(up.data,up.W,up.H,255-ot-o.thick,o,s);cnt=ds.length;
+  if(o.bg)body+='<rect width="'+W+'" height="'+H+'" fill="#fff"/>';
+  body+='<path fill="'+hex(col)+'" fill-rule="evenodd" d="'+ds.join('')+'"/>';
+ }else{
+  var sg2=Math.max(o.blur,0.01),Rb=blur(R,w,h,sg2),Gb=blur(G,w,h,sg2),Bb=blur(B,w,h,sg2),km=kmeans(Rb,Gb,Bb,w,h,o.colors);
+  body+='<rect width="'+W+'" height="'+H+'" fill="'+hex(km.cent[0])+'"/>';
+  for(var r=1;r<km.cent.length;r++){
+   if(progress)progress(r,km.cent.length-1);await tick();
+   var mk=new Float32Array(n);for(i=0;i<n;i++)mk[i]=km.label[i]>=r?255:0;
+   var u2=upsample(mk,w,h,s),d2=traceField(u2.data,u2.W,u2.H,127.5,o,s);cnt+=d2.length;
+   if(d2.length)body+='<path fill="'+hex(km.cent[r])+'" fill-rule="evenodd" d="'+d2.join('')+'"/>'}
+ }
+ return{svg:svgHead+body+'</svg>',paths:cnt,scale:s,W:W,H:H}}
+
+function label(m,w,h,minA){
+ var lab=new Int32Array(w*h),st=new Int32Array(w*h),comps=[],i,id=0;
+ for(i=0;i<w*h;i++){
+  if(!m[i]||lab[i])continue;id++;var sp=0,a=0,x0=w,y0=h,x1=0,y1=0;st[sp++]=i;lab[i]=id;
+  while(sp){var p=st[--sp],x=p%w,y=(p/w)|0;a++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+   if(x>0&&m[p-1]&&!lab[p-1]){lab[p-1]=id;st[sp++]=p-1}
+   if(x<w-1&&m[p+1]&&!lab[p+1]){lab[p+1]=id;st[sp++]=p+1}
+   if(y>0&&m[p-w]&&!lab[p-w]){lab[p-w]=id;st[sp++]=p-w}
+   if(y<h-1&&m[p+w]&&!lab[p+w]){lab[p+w]=id;st[sp++]=p+w}}
+  if(a>=minA)comps.push({x0:x0,y0:y0,x1:x1,y1:y1,a:a})}
+ return comps}
+function dilate(m,w,h){
+ var t=new Uint8Array(w*h),o=new Uint8Array(w*h),x,y,i;
+ for(y=0;y<h;y++)for(x=0;x<w;x++){i=y*w+x;t[i]=m[i]|(x>0?m[i-1]:0)|(x<w-1?m[i+1]:0)}
+ for(y=0;y<h;y++)for(x=0;x<w;x++){i=y*w+x;o[i]=t[i]|(y>0?t[i-w]:0)|(y<h-1?t[i+w]:0)}
+ return o}
+function readingOrder(bx){
+ if(!bx.length)return bx;var hs=bx.map(function(b){return b.h}).sort(function(a,b){return a-b}),mh=hs[hs.length>>1];
+ bx.sort(function(a,b){return(a.y+a.h/2)-(b.y+b.h/2)});
+ var rows=[],cur=[bx[0]],cy=bx[0].y+bx[0].h/2,i;
+ for(i=1;i<bx.length;i++){var c=bx[i].y+bx[i].h/2;if(c-cy>mh*0.6){rows.push(cur);cur=[bx[i]];cy=c}else{cur.push(bx[i]);cy=(cy*cur.length+c)/(cur.length+1)}}
+ rows.push(cur);var out=[];rows.forEach(function(r){r.sort(function(a,b){return a.x-b.x});out=out.concat(r)});return out}
+// find separate icons on a sheet: mode 'auto' (target count) or 'grid' (cols x rows)
+function detect(rgba,w,h,o){
+ var n=w*h,i,gray=new Float32Array(n),smp=[];
+ for(i=0;i<n;i++){var a=rgba[4*i+3]/255,q=255*(1-a);gray[i]=(0.299*rgba[4*i]+0.587*rgba[4*i+1]+0.114*rgba[4*i+2])*a+q}
+ for(i=0;i<n;i+=Math.max(1,(n/20000)|0))smp.push(gray[i]);smp.sort(function(a,b){return a-b});
+ var bg=smp[smp.length>>1],dv=smp.map(function(v){return Math.abs(v-bg)}).sort(function(a,b){return a-b}),thr=Math.max(25,dv[Math.floor(dv.length*0.99)]*0.35);
+ var d=Math.max(1,Math.ceil(Math.max(w,h)/800)),dw=Math.ceil(w/d),dh=Math.ceil(h/d),m=new Uint8Array(dw*dh),x,y;
+ for(y=0;y<h;y++)for(x=0;x<w;x++)if(Math.abs(gray[y*w+x]-bg)>thr)m[((y/d)|0)*dw+((x/d)|0)]=1;
+ var boxes=[],found=0;
+ function pad(b){var p=Math.max(3,0.05*Math.max(b.x1-b.x0,b.y1-b.y0)),X0=Math.max(0,Math.floor((b.x0-p)*d)),Y0=Math.max(0,Math.floor((b.y0-p)*d)),X1=Math.min(w,Math.ceil((b.x1+1+p)*d)),Y1=Math.min(h,Math.ceil((b.y1+1+p)*d));return{x:X0,y:Y0,w:X1-X0,h:Y1-Y0}}
+ var minA=Math.max(4,0.0003*dw*dh);
+ if(o.mode==='grid'){
+  var cols=Math.max(1,o.cols|0),rows=Math.max(1,o.rows|0),cw=dw/cols,ch=dh/rows,r,c;
+  for(r=0;r<rows;r++)for(c=0;c<cols;c++){var x0=dw,y0=dh,x1=-1,y1=-1;
+   for(y=Math.floor(r*ch);y<Math.floor((r+1)*ch);y++)for(x=Math.floor(c*cw);x<Math.floor((c+1)*cw);x++)if(m[y*dw+x]){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+   if(x1>=0){boxes.push(pad({x0:x0,y0:y0,x1:x1,y1:y1}));found++}}
+  return{boxes:boxes,found:found,exact:true}}
+ var target=Math.max(1,o.count|0),cur=m,best=null,bd=1e9,maxSteps=Math.round(0.1*Math.max(dw,dh)),step;
+ for(step=0;step<=maxSteps;step++){
+  if(step>0)cur=dilate(cur,dw,dh);
+  var comps=label(cur,dw,dh,minA),df=Math.abs(comps.length-target);
+  if(df<bd){bd=df;best={comps:comps,step:step}}
+  if(df===0||comps.length<target)break}
+ best.comps.forEach(function(c){var s=best.step;boxes.push(pad({x0:Math.min(c.x1,c.x0+s),y0:Math.min(c.y1,c.y0+s),x1:Math.max(c.x0,c.x1-s),y1:Math.max(c.y0,c.y1-s)}))});
+ return{boxes:readingOrder(boxes),found:best.comps.length,exact:bd===0}}
+var crcT=null;
+function crc32(u){if(!crcT){crcT=new Int32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?(c>>>1)^0xEDB88320:c>>>1;crcT[n]=c}}
+ var c=-1;for(var i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return(c^-1)>>>0}
+function zip(files){
+ var enc=new TextEncoder(),parts=[],cd=[],off=0,dt=((2026-1980)<<9)|(1<<5)|1;
+ files.forEach(function(f){var nm=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length,h=new DataView(new ArrayBuffer(30));
+  h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,0,true);h.setUint16(10,0,true);h.setUint16(12,dt,true);h.setUint32(14,crc,true);h.setUint32(18,sz,true);h.setUint32(22,sz,true);h.setUint16(26,nm.length,true);h.setUint16(28,0,true);
+  parts.push(new Uint8Array(h.buffer),nm,f.data);
+  var c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(12,0,true);c.setUint16(14,dt,true);c.setUint32(16,crc,true);c.setUint32(20,sz,true);c.setUint32(24,sz,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+  cd.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+sz});
+ var cs=0;cd.forEach(function(p){cs+=p.length});
+ var e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob(parts.concat(cd,[new Uint8Array(e.buffer)]),{type:'application/zip'})}
+root.VT={convert:convert,defaults:defaults,detect:detect,zip:zip};
+if(typeof module!=='undefined')module.exports=root.VT;
+})(typeof self!=='undefined'?self:globalThis);
+
+</script>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var img=null,svgText='',svgUrl='',imgUrl='',busy=false;
+var P={ikon:{mode:'bw',thick:-10,blur:.4,smooth:4,eps:.35,minArea:0,colors:2},
+ logo:{mode:'color',colors:6,thick:0,blur:.5,smooth:4,eps:.4,minArea:1},
+ foto:{mode:'color',colors:20,thick:0,blur:.7,smooth:4,eps:.5,minArea:2}};
+var ids=['colors','thick','blur','smooth','eps','minArea','zoom','pngsize'];
+function sync(){ids.forEach(function(i){var v=$(i).value;$(i+'V').textContent=i==='zoom'?v+'×':(i==='pngsize'?v+' px':v)});
+ var bw=$('preset').value==='ikon';$('colors').style.display=$('colorsL').style.display=bw?'none':'';$('bgL').style.display=bw?'':'none';
+ var z=+$('zoom').value;['s1','s2'].forEach(function(s){var st=$(s),im=st.querySelector('img');if(st.classList.contains('grid'))return;st.classList.toggle('z',z>1);if(im)im.style.width=z>1?(z*100)+'%':'100%'})}
+ids.forEach(function(i){$(i).addEventListener('input',sync)});
+$('preset').addEventListener('change',function(){var p=P[this.value];['colors','thick','blur','smooth','eps','minArea'].forEach(function(k){$(k).value=p[k]});sync()});
+sync();
+function msg(t,e){var s=$('stats');s.textContent=t;s.className=e?'err':''}
+function load(f){
+ if(!f||!/^image\//.test(f.type)){msg('Berkas bukan gambar. Pilih JPG, PNG, atau WebP.',1);return}
+ if(imgUrl)URL.revokeObjectURL(imgUrl);imgUrl=URL.createObjectURL(f);
+ var im=new Image();
+ im.onload=function(){img=im;$('s1').innerHTML='';var o=new Image();o.src=imgUrl;o.alt='Gambar asli';$('s1').appendChild(o);sync();
+  $('go').disabled=false;msg('Gambar dimuat: '+im.naturalWidth+' × '+im.naturalHeight+' px. Klik "Ubah ke vektor".')};
+ im.onerror=function(){msg('Gambar tidak bisa dibaca. Coba berkas lain.',1)};
+ im.src=imgUrl;
+}
+$('drop').addEventListener('click',function(){$('file').click()});
+$('drop').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}});
+$('file').addEventListener('change',function(){load(this.files[0])});
+['dragenter','dragover'].forEach(function(t){$('drop').addEventListener(t,function(e){e.preventDefault();this.classList.add('over')})});
+['dragleave','drop'].forEach(function(t){$('drop').addEventListener(t,function(e){e.preventDefault();this.classList.remove('over')})});
+$('drop').addEventListener('drop',function(e){load(e.dataTransfer.files[0])});
+
+function showMode(){var m=$('split').value;$('autoBox').hidden=m!=='auto';$('gridBox').hidden=m!=='grid'}
+$('split').addEventListener('change',showMode);showMode();
+var results=[],single=null;
+function opts(){var p=$('preset').value;return{mode:p==='ikon'?'bw':'color',colors:+$('colors').value,thick:+$('thick').value,blur:+$('blur').value,smooth:+$('smooth').value,eps:+$('eps').value,minArea:+$('minArea').value,corners:$('corners').checked,bg:$('bg').checked}}
+function pad2(n){return(n<10?'0':'')+n}
+$('go').addEventListener('click',async function(){
+ if(!img||busy)return;busy=true;var btn=this;btn.disabled=true;btn.textContent='Memproses…';msg('Sedang melacak bentuk, mohon tunggu.');
+ ['dlSvg','dlPng','dlZip'].forEach(function(i){$(i).disabled=true});
+ try{
+  var k=Math.min(1,2400/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.max(1,Math.round(img.naturalWidth*k)),h=Math.max(1,Math.round(img.naturalHeight*k));
+  var cv=document.createElement('canvas');cv.width=w;cv.height=h;var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);
+  var o=opts(),mode=$('split').value;
+  if(mode==='one'){
+   var r=await VT.convert(cx.getImageData(0,0,w,h).data,w,h,o,function(i,n){msg('Melacak lapisan warna '+i+' dari '+n+'…')});
+   single=r.svg;results=[];if(svgUrl)URL.revokeObjectURL(svgUrl);
+   svgUrl=URL.createObjectURL(new Blob([single],{type:'image/svg+xml'}));
+   var st=$('s2');st.className='stage';st.innerHTML='';var o2=new Image();o2.src=svgUrl;o2.alt='Hasil vektor';st.appendChild(o2);
+   $('dlOne').hidden=false;$('dlMulti').hidden=true;sync();
+   msg('Selesai: '+r.paths.toLocaleString('id-ID')+' bentuk, '+(single.length/1024).toFixed(0)+' KB, dilacak pada skala '+r.scale+'×. Geser zoom untuk memeriksa kehalusan.');
+   $('dlSvg').disabled=false;$('dlPng').disabled=false;
+  }else{
+   var all=cx.getImageData(0,0,w,h).data,det=VT.detect(all,w,h,{mode:mode,count:+$('count').value,cols:+$('cols').value,rows:+$('rows').value});
+   if(!det.boxes.length)throw new Error('none');
+   // tampilkan kotak deteksi di gambar asli
+   var ov=document.createElement('canvas'),sc=Math.min(1,1200/Math.max(w,h));ov.width=Math.round(w*sc);ov.height=Math.round(h*sc);var oc=ov.getContext('2d');oc.drawImage(cv,0,0,ov.width,ov.height);
+   oc.lineWidth=2;oc.strokeStyle='#e0245e';oc.fillStyle='#e0245e';oc.font='bold 14px sans-serif';
+   det.boxes.forEach(function(b,i){oc.strokeRect(b.x*sc,b.y*sc,b.w*sc,b.h*sc);oc.fillText(String(i+1),b.x*sc+4,b.y*sc+16)});
+   var im1=$('s1').querySelector('img');if(im1)im1.src=ov.toDataURL('image/png');
+   results.forEach(function(x){URL.revokeObjectURL(x.url)});results=[];
+   var st2=$('s2');st2.className='stage grid';st2.innerHTML='';
+   for(var i=0;i<det.boxes.length;i++){
+    msg('Mengubah ikon '+(i+1)+' dari '+det.boxes.length+'…');await new Promise(function(r){setTimeout(r,0)});
+    var b=det.boxes[i],rr=await VT.convert(cx.getImageData(b.x,b.y,b.w,b.h).data,b.w,b.h,o);
+    var u=URL.createObjectURL(new Blob([rr.svg],{type:'image/svg+xml'}));results.push({svg:rr.svg,url:u,w:b.w,h:b.h});
+    var t2=new Image();t2.src=u;t2.alt='Ikon '+(i+1);st2.appendChild(t2)}
+   $('dlOne').hidden=true;$('dlMulti').hidden=false;$('dlZip').textContent='Unduh ZIP ('+results.length+' ikon)';$('dlZip').disabled=false;
+   msg((mode==='auto'&&!det.exact?'Ditemukan '+det.found+' ikon, bukan '+$('count').value+'. Ubah jumlah ikon atau pakai mode grid. ':'Selesai: '+results.length+' ikon terpisah. ')+'Cek kotak merah di gambar asli, lalu unduh ZIP.');
+  }
+ }catch(e){msg(e&&e.message==='none'?'Tidak ada ikon yang terdeteksi. Coba mode grid atau gambar dengan latar polos.':'Gagal memproses. Turunkan jumlah warna atau coba gambar yang lebih kecil.',1)}
+ busy=false;btn.disabled=false;btn.textContent='Ubah ke vektor';
+});
+async function saveFile(name,blob){
+ try{if(window.claude&&claude.use){var d=await claude.use('downloads');if(d){await d.save({filename:name,data:blob});return}}}catch(e){if(e&&e.code==='declined')return}
+ var u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000)}
+function rasterize(url,W,H){return new Promise(function(res,rej){var im=new Image();im.onload=function(){var c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);c.toBlob(function(b){b?res(b):rej(new Error('big'))},'image/png')};im.onerror=function(){rej(new Error('img'))};im.src=url})}
+$('dlSvg').addEventListener('click',function(){if(single)saveFile('vektor.svg',new Blob([single],{type:'image/svg+xml'}))});
+$('dlPng').addEventListener('click',async function(){
+ if(!svgUrl||!img)return;var W=+$('pngsize').value,H=Math.round(W*img.naturalHeight/img.naturalWidth);
+ try{saveFile('vektor-'+W+'px.png',await rasterize(svgUrl,W,H))}catch(e){msg('Ukuran PNG terlalu besar untuk perangkat ini. Turunkan lebarnya.',1)}});
+$('dlZip').addEventListener('click',async function(){
+ if(!results.length||busy)return;busy=true;var btn=this;btn.disabled=true;var files=[],enc=new TextEncoder(),wantPng=$('zipPng').checked,W=+$('pngsize').value;
+ try{for(var i=0;i<results.length;i++){var r=results[i],nm='ikon-'+pad2(i+1);msg('Menyusun ZIP: '+(i+1)+' dari '+results.length+'…');
+   files.push({name:nm+'.svg',data:enc.encode(r.svg)});
+   if(wantPng){var b=await rasterize(r.url,W,Math.round(W*r.h/r.w));files.push({name:nm+'.png',data:new Uint8Array(await b.arrayBuffer())})}}
+  await saveFile('ikon-vektor.zip',VT.zip(files));msg('ZIP siap: '+results.length+' ikon'+(wantPng?' (SVG dan PNG)':' (SVG)')+'.')
+ }catch(e){msg('Gagal menyusun ZIP. Matikan opsi PNG atau turunkan lebar PNG, lalu coba lagi.',1)}
+ busy=false;btn.disabled=false});
+})();
+</script>
+</body>
+</html>
